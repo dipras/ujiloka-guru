@@ -1,11 +1,9 @@
 import { createBrowserRouter } from "react-router-dom";
-import {
-  CollectResultsPage,
-  CreateExamPage,
-  DistributeQrPage,
-  RecapPage,
-  TeacherAppLayout,
-} from "./screens/TeacherApp";
+import { TeacherAppLayout } from "./layouts/TeacherAppLayout";
+import { CollectResultsPage } from "./pages/CollectResultsPage";
+import { CreateExamPage } from "./pages/CreateExamPage";
+import { DistributeQrPage } from "./pages/DistributeQrPage";
+import { RecapPage } from "./pages/RecapPage";
 
 export const router = createBrowserRouter([
   {
