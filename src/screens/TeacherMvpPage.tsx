@@ -6,10 +6,14 @@ import {
   normalizeDraft,
   type ExamDraft,
 } from "../lib/factory";
+import { encodeJson } from "../lib/codec";
+import { buildExamPayload } from "../lib/exam";
 
 export function TeacherMvpPage() {
   const [draft, setDraft] = useState<ExamDraft>(() => makeInitialDraft());
   const normalized = useMemo(() => normalizeDraft(draft), [draft]);
+  const examPayload = useMemo(() => buildExamPayload(draft), [draft]);
+  const examJson = useMemo(() => encodeJson(examPayload), [examPayload]);
   const answerMap = useMemo(
     () => new Map(draft.ak.map((entry) => [entry.qid, entry.oid])),
     [draft.ak],
@@ -298,6 +302,18 @@ export function TeacherMvpPage() {
               <dd className="font-semibold text-ink">{normalized.cls || "-"}</dd>
             </div>
           </dl>
+          <div className="mt-4 rounded-md border border-line bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Payload
+            </p>
+            <p className="mt-1 text-sm font-semibold text-ink">
+              {examJson.length.toLocaleString("id-ID")} karakter
+            </p>
+            <p className="mt-2 break-all text-xs leading-5 text-muted">
+              `ak`: {examPayload.ak.slice(0, 48)}
+              {examPayload.ak.length > 48 ? "..." : ""}
+            </p>
+          </div>
         </aside>
       </section>
     </main>
