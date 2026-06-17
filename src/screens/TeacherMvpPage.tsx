@@ -20,6 +20,7 @@ import { QrImage } from "../components/QrImage";
 import { ResultScanner } from "../components/ResultScanner";
 import { scoreObjectiveResult } from "../lib/scoring";
 import { CollectedResult, QrChunk, ResultPayload } from "../lib/schema";
+import { buildResultCsv, downloadCsv } from "../lib/csv";
 
 export function TeacherMvpPage() {
   const [draft, setDraft] = useState<ExamDraft>(() => makeInitialDraft());
@@ -507,7 +508,23 @@ export function TeacherMvpPage() {
               perangkat siswa tidak dipakai.
             </p>
           </div>
-          <span className="badge">{results.length} hasil</span>
+          <div className="flex flex-wrap gap-2">
+            <span className="badge">{results.length} hasil</span>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              disabled={results.length === 0}
+              onClick={() =>
+                downloadCsv(
+                  `${normalized.eid}-hasil.csv`,
+                  buildResultCsv([...results].reverse()),
+                )
+              }
+            >
+              <Download size={16} />
+              CSV
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
