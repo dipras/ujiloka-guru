@@ -1,5 +1,8 @@
 import { AnswerKeyEntry, Question } from "./schema";
 
+export const MIN_OPTIONS_PER_QUESTION = 2;
+export const MAX_OPTIONS_PER_QUESTION = 10;
+
 export type ExamDraft = {
   eid: string;
   ttl: string;
@@ -21,13 +24,21 @@ export function makeSessionCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+export function makeOptionId(index: number) {
+  return String.fromCharCode(97 + index);
+}
+
+export function makeOptionIds(count: number) {
+  return Array.from({ length: count }, (_, index) => makeOptionId(index));
+}
+
 export function makeQuestion(index: number): Question {
   const qid = `q${index}`;
   return {
     id: qid,
     txt: "",
     pts: 10,
-    opts: ["o1", "o2", "o3", "o4"].map((id) => ({
+    opts: makeOptionIds(4).map((id) => ({
       id,
       txt: "",
     })),
@@ -51,14 +62,19 @@ export function makeInitialDraft(): ExamDraft {
 export function normalizeDraft(draft: ExamDraft): ExamDraft {
   const questions = draft.qs.map((question, index) => {
     const id = question.id.trim() || `q${index + 1}`;
+    const optionCount = Math.min(
+      MAX_OPTIONS_PER_QUESTION,
+      Math.max(MIN_OPTIONS_PER_QUESTION, question.opts.length),
+    );
+    const optionIds = makeOptionIds(optionCount);
     return {
       ...question,
       id,
       txt: question.txt.trim(),
       pts: Number.isFinite(question.pts) ? Math.max(0, question.pts) : 0,
-      opts: question.opts.map((option, optionIndex) => ({
-        id: option.id.trim() || `o${optionIndex + 1}`,
-        txt: option.txt.trim(),
+      opts: optionIds.map((optionId, optionIndex) => ({
+        id: optionId,
+        txt: question.opts[optionIndex]?.txt.trim() || "",
       })),
     };
   });
@@ -72,12 +88,24 @@ export function normalizeDraft(draft: ExamDraft): ExamDraft {
     sch: draft.sch.trim() || makeSessionCode(),
     dur: Math.max(1, Math.round(draft.dur || 1)),
     qs: questions,
-    ak: questions.map((question) => {
-      const existing = draft.ak.find((entry) => entry.qid === question.id);
+    ak: questions.map((question, questionIndex) => {
+      const draftQuestion = draft.qs[questionIndex];
+      const existing = draft.ak.find(
+        (entry) => entry.qid === question.id || entry.qid === draftQuestion?.id,
+      );
+      const oldOptionIndex = draftQuestion?.opts.findIndex(
+        (option) => option.id === existing?.oid,
+      );
+      const mappedOption =
+        typeof oldOptionIndex === "number" && oldOptionIndex >= 0
+          ? question.opts[oldOptionIndex]
+          : undefined;
       const validOption = question.opts.some((option) => option.id === existing?.oid);
       return {
         qid: question.id,
-        oid: validOption ? existing!.oid : question.opts[0]?.id || "",
+        oid: validOption
+          ? existing!.oid
+          : mappedOption?.id || question.opts[0]?.id || "",
       };
     }),
   };

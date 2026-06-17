@@ -105,7 +105,9 @@ export function ExamDetailPage() {
               <div className="mt-3 grid gap-2 md:grid-cols-2">
                 {question.opts.map((option) => (
                   <div className="rounded-md border border-line px-3 py-2 text-sm" key={option.id}>
-                    <span className="font-semibold text-ink">{option.id}</span>
+                    <span className="font-semibold text-ink">
+                      {option.id.toUpperCase()}
+                    </span>
                     <span className="ml-2 text-muted">{option.txt || "-"}</span>
                   </div>
                 ))}

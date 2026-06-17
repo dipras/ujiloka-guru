@@ -3,13 +3,19 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SectionTitle } from "../components/SectionTitle";
 import { TextField } from "../components/TextField";
+import {
+  MAX_OPTIONS_PER_QUESTION,
+  MIN_OPTIONS_PER_QUESTION,
+} from "../lib/factory";
 import { useTeacher } from "../teacher/teacherContext";
 
 export function CreateExamPage() {
   const {
+    addOption,
     addQuestion,
     draft,
     publishDraft,
+    removeOption,
     removeQuestion,
     setAnswer,
     setDraft,
@@ -76,7 +82,7 @@ export function CreateExamPage() {
         <section className="card">
           <div className="flex items-center justify-between gap-3">
             <SectionTitle
-              description="Jawaban benar memakai ID opsi, misalnya o1, bukan huruf."
+              description="Jawaban benar memakai label opsi a, b, c, dan seterusnya."
               title="Editor Soal"
             />
             <button className="btn btn-primary" type="button" onClick={addQuestion}>
@@ -140,8 +146,21 @@ export function CreateExamPage() {
 
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   {question.opts.map((option) => (
-                    <label key={option.id}>
-                      <span className="label">Opsi {option.id}</span>
+                    <div key={option.id}>
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-ink">
+                          Opsi {option.id.toUpperCase()}
+                        </span>
+                        <button
+                          className="btn btn-ghost min-h-8 px-2"
+                          disabled={question.opts.length <= MIN_OPTIONS_PER_QUESTION}
+                          onClick={() => removeOption(question.id, option.id)}
+                          title="Hapus opsi"
+                          type="button"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                       <input
                         className="field"
                         value={option.txt}
@@ -156,9 +175,19 @@ export function CreateExamPage() {
                           }))
                         }
                       />
-                    </label>
+                    </div>
                   ))}
                 </div>
+
+                <button
+                  className="btn btn-secondary mt-3"
+                  disabled={question.opts.length >= MAX_OPTIONS_PER_QUESTION}
+                  onClick={() => addOption(question.id)}
+                  type="button"
+                >
+                  <Plus size={16} />
+                  Tambah opsi
+                </button>
 
                 <label className="mt-3 block">
                   <span className="label">Jawaban benar</span>
@@ -169,7 +198,7 @@ export function CreateExamPage() {
                   >
                     {question.opts.map((option) => (
                       <option key={option.id} value={option.id}>
-                        {option.id}
+                        {option.id.toUpperCase()}
                       </option>
                     ))}
                   </select>

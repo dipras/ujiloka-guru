@@ -11,7 +11,10 @@ import {
 } from "../lib/codec";
 import { buildExamPayload, makeAnswerKeySecret } from "../lib/exam";
 import {
+  MAX_OPTIONS_PER_QUESTION,
+  MIN_OPTIONS_PER_QUESTION,
   makeId,
+  makeOptionId,
   makeSessionCode,
   makeInitialDraft,
   makeQuestion,
@@ -57,7 +60,7 @@ function examToDraft(exam: PublishedExam): ExamDraft {
     makeAnswerKeySecret(exam.payload.eid, exam.payload.sch),
   );
 
-  return {
+  return normalizeDraft({
     eid: makeId("exam"),
     ttl: `${exam.payload.ttl} Revisi`,
     subj: exam.payload.subj,
@@ -69,7 +72,7 @@ function examToDraft(exam: PublishedExam): ExamDraft {
       opts: question.opts.map((option) => ({ ...option })),
     })),
     ak: answerKey,
-  };
+  });
 }
 
 export function useTeacherState() {
@@ -160,6 +163,74 @@ export function useTeacherState() {
         ...current,
         qs: current.qs.filter((question) => question.id !== qid),
         ak: current.ak.filter((entry) => entry.qid !== qid),
+      };
+    });
+  }
+
+  function addOption(qid: string) {
+    setDraft((current) => ({
+      ...current,
+      qs: current.qs.map((question) => {
+        if (
+          question.id !== qid ||
+          question.opts.length >= MAX_OPTIONS_PER_QUESTION
+        ) {
+          return question;
+        }
+        return {
+          ...question,
+          opts: [
+            ...question.opts,
+            {
+              id: makeOptionId(question.opts.length),
+              txt: "",
+            },
+          ],
+        };
+      }),
+    }));
+  }
+
+  function removeOption(qid: string, oid: string) {
+    setDraft((current) => {
+      const question = current.qs.find((item) => item.id === qid);
+      const remainingOptions =
+        question?.opts.filter((option) => option.id !== oid) || [];
+      const reindexedOptions = remainingOptions.map((option, index) => ({
+        ...option,
+        id: makeOptionId(index),
+      }));
+
+      return {
+        ...current,
+        qs: current.qs.map((question) => {
+        if (
+          question.id !== qid ||
+          question.opts.length <= MIN_OPTIONS_PER_QUESTION
+        ) {
+          return question;
+        }
+        return {
+          ...question,
+          opts: reindexedOptions,
+        };
+      }),
+      ak: current.ak.map((entry) => {
+        if (entry.qid !== qid) return entry;
+        const selectedNewIndex = remainingOptions.findIndex(
+          (option) => option.id === entry.oid,
+        );
+        if (selectedNewIndex >= 0) {
+          return {
+            ...entry,
+            oid: makeOptionId(selectedNewIndex),
+          };
+        }
+        return {
+          ...entry,
+          oid: reindexedOptions[0]?.id || makeOptionId(0),
+        };
+      }),
       };
     });
   }
@@ -303,6 +374,7 @@ export function useTeacherState() {
 
   return {
     addQuestion,
+    addOption,
     collectorMessage,
     draft,
     duplicateExamToDraft,
@@ -314,6 +386,7 @@ export function useTeacherState() {
     publishDraft,
     qrCache,
     removeQuestion,
+    removeOption,
     selectedExam,
     selectedExamId,
     setAnswer,
