@@ -1,18 +1,27 @@
-import { ClipboardList, FileQuestion, Home, QrCode, ScanLine } from "lucide-react";
+import { ClipboardList, FileQuestion, Home, ScanLine } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { Metric } from "../components/Metric";
 import { TeacherContext } from "../teacher/teacherContext";
 import { useTeacherState } from "../teacher/useTeacherState";
 
-const navigation = [
-  { to: "/", label: "Buat Ujian", icon: FileQuestion, end: true },
-  { to: "/qr", label: "QR Distribusi", icon: QrCode },
-  { to: "/collect", label: "Kumpulkan", icon: ScanLine },
-  { to: "/recap", label: "Rekap", icon: ClipboardList },
-];
-
 export function TeacherAppLayout() {
   const state = useTeacherState();
+  const selectedPath = state.selectedExamId;
+  const navigation = [
+    { to: "/", label: "Ujian", icon: FileQuestion, end: true },
+    {
+      to: selectedPath ? `/collect/${selectedPath}` : "/",
+      label: "Kumpulkan",
+      icon: ScanLine,
+      end: false,
+    },
+    {
+      to: selectedPath ? `/recap/${selectedPath}` : "/",
+      label: "Rekap",
+      icon: ClipboardList,
+      end: false,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -59,7 +68,10 @@ export function TeacherAppLayout() {
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-5 text-sm text-muted md:flex-row md:items-center md:justify-between">
           <span>Alur MVP: Generate QR, Scan Hasil, Scoring, CSV.</span>
           <span>
-            Exam ID: <strong className="text-ink">{state.normalized.eid}</strong>
+            Exam ID:{" "}
+            <strong className="text-ink">
+              {state.selectedExam?.payload.eid || "Belum ada"}
+            </strong>
           </span>
         </div>
       </footer>
@@ -68,17 +80,19 @@ export function TeacherAppLayout() {
 }
 
 function StatusStrip({ state }: { state: TeacherContext }) {
-  const { examChunks, examJson, normalized, results, validResults } = state;
+  const { exams, selectedExam } = state;
+  const validResults =
+    selectedExam?.results.filter((item) => item.status === "valid").length || 0;
 
   return (
     <section className="grid gap-3 no-print sm:grid-cols-2 lg:grid-cols-4">
-      <Metric label="Judul" value={normalized.ttl || "Belum diisi"} />
-      <Metric label="Soal" value={`${normalized.qs.length} soal`} />
-      <Metric label="QR" value={`${examChunks.length} chunk`} />
+      <Metric label="Total Ujian" value={`${exams.length} ujian`} />
+      <Metric label="Aktif" value={selectedExam?.payload.ttl || "Belum ada"} />
+      <Metric label="QR" value={`${selectedExam?.chunks.length || 0} chunk`} />
       <Metric
-        detail={`${examJson.length.toLocaleString("id-ID")} karakter`}
+        detail={selectedExam ? selectedExam.payload.eid : "Pilih ujian"}
         label="Hasil"
-        value={`${validResults.length}/${results.length} valid`}
+        value={`${validResults}/${selectedExam?.results.length || 0} valid`}
       />
     </section>
   );

@@ -1,4 +1,6 @@
 import { Download } from "lucide-react";
+import { useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
 import { Metric } from "../components/Metric";
 import { ResultsTable } from "../components/ResultsTable";
 import { SectionTitle } from "../components/SectionTitle";
@@ -6,7 +8,26 @@ import { buildResultCsv, downloadCsv } from "../lib/csv";
 import { useTeacher } from "../teacher/teacherContext";
 
 export function RecapPage() {
-  const { normalized, results, validResults } = useTeacher();
+  const { id = "" } = useParams();
+  const { exams, setSelectedExamId } = useTeacher();
+  const exam = exams.find((item) => item.id === id);
+
+  useEffect(() => {
+    if (exam) setSelectedExamId(exam.id);
+  }, [exam, setSelectedExamId]);
+
+  if (!exam) {
+    return (
+      <section className="card text-center">
+        <h2 className="text-xl font-bold text-ink">Ujian tidak ditemukan</h2>
+        <Link className="btn btn-primary mt-4" to="/">
+          Kembali ke daftar
+        </Link>
+      </section>
+    );
+  }
+
+  const validResults = exam.results.filter((item) => item.status === "valid");
 
   return (
     <section className="card">
@@ -17,11 +38,11 @@ export function RecapPage() {
         />
         <button
           className="btn btn-secondary"
-          disabled={results.length === 0}
+          disabled={exam.results.length === 0}
           onClick={() =>
             downloadCsv(
-              `${normalized.eid}-hasil.csv`,
-              buildResultCsv([...results].reverse()),
+              `${exam.id}-hasil.csv`,
+              buildResultCsv([...exam.results].reverse()),
             )
           }
           type="button"
@@ -31,14 +52,14 @@ export function RecapPage() {
         </button>
       </div>
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <Metric label="Total" value={`${results.length} hasil`} />
+        <Metric label="Total" value={`${exam.results.length} hasil`} />
         <Metric label="Valid" value={`${validResults.length} hasil`} />
         <Metric
           label="Ditandai"
-          value={`${results.length - validResults.length} hasil`}
+          value={`${exam.results.length - validResults.length} hasil`}
         />
       </div>
-      <ResultsTable results={results} />
+      <ResultsTable results={exam.results} />
     </section>
   );
 }

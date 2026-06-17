@@ -6,55 +6,118 @@ import {
   isQrChunk,
   isResultPayload,
   reconstructChunks,
+  revealAnswerKey,
   stringifyChunk,
 } from "../lib/codec";
-import { buildExamPayload } from "../lib/exam";
+import { buildExamPayload, makeAnswerKeySecret } from "../lib/exam";
 import {
+  makeId,
+  makeSessionCode,
   makeInitialDraft,
   makeQuestion,
   normalizeDraft,
   type ExamDraft,
 } from "../lib/factory";
+import { renderQrBatch } from "../lib/qr";
 import { scoreObjectiveResult } from "../lib/scoring";
-import { CollectedResult, QrChunk, ResultPayload } from "../lib/schema";
+import {
+  CollectedResult,
+  ExamPayload,
+  QrChunk,
+  ResultPayload,
+} from "../lib/schema";
+
+const STORAGE_KEY = "lidm-teacher-web.exams.v1";
+
+export type PublishedExam = {
+  id: string;
+  payload: ExamPayload;
+  chunks: QrChunk[];
+  chunkValues: string[];
+  createdAt: string;
+  updatedAt: string;
+  results: CollectedResult[];
+};
+
+function loadStoredExams(): PublishedExam[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as PublishedExam[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function examToDraft(exam: PublishedExam): ExamDraft {
+  const answerKey = revealAnswerKey(
+    exam.payload.ak,
+    makeAnswerKeySecret(exam.payload.eid, exam.payload.sch),
+  );
+
+  return {
+    eid: makeId("exam"),
+    ttl: `${exam.payload.ttl} Revisi`,
+    subj: exam.payload.subj,
+    cls: exam.payload.cls,
+    dur: exam.payload.dur,
+    sch: makeSessionCode(),
+    qs: exam.payload.qs.map((question) => ({
+      ...question,
+      opts: question.opts.map((option) => ({ ...option })),
+    })),
+    ak: answerKey,
+  };
+}
 
 export function useTeacherState() {
+  const [exams, setExams] = useState<PublishedExam[]>(() => loadStoredExams());
   const [draft, setDraft] = useState<ExamDraft>(() => makeInitialDraft());
+  const [selectedExamId, setSelectedExamId] = useState("");
   const [slideIndex, setSlideIndex] = useState(0);
   const [slideSpeed, setSlideSpeed] = useState(1800);
   const [manualResult, setManualResult] = useState("");
   const [collectorMessage, setCollectorMessage] = useState("");
   const [resultChunks, setResultChunks] = useState<Record<string, QrChunk[]>>({});
-  const [results, setResults] = useState<CollectedResult[]>([]);
+  const [qrCache, setQrCache] = useState<Record<string, string[]>>({});
+  const [preparingExamId, setPreparingExamId] = useState("");
 
-  const normalized = useMemo(() => normalizeDraft(draft), [draft]);
-  const examPayload = useMemo(() => buildExamPayload(draft), [draft]);
-  const examJson = useMemo(() => encodeJson(examPayload), [examPayload]);
-  const examChunks = useMemo(
-    () => chunkString(examPayload.eid, examJson),
-    [examJson, examPayload.eid],
+  const selectedExam = useMemo(
+    () =>
+      exams.find((exam) => exam.id === selectedExamId) ||
+      exams[0] ||
+      null,
+    [exams, selectedExamId],
   );
-  const examChunkValues = useMemo(
-    () => examChunks.map((chunk) => stringifyChunk(chunk)),
-    [examChunks],
-  );
-  const answerMap = useMemo(
-    () => new Map(draft.ak.map((entry) => [entry.qid, entry.oid])),
-    [draft.ak],
-  );
-  const validResults = results.filter((item) => item.status === "valid");
 
   useEffect(() => {
-    if (examChunkValues.length <= 1) return;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(exams));
+  }, [exams]);
+
+  useEffect(() => {
+    if (!selectedExamId && exams[0]) {
+      setSelectedExamId(exams[0].id);
+    }
+  }, [exams, selectedExamId]);
+
+  useEffect(() => {
+    const qrImages = selectedExam ? qrCache[selectedExam.id] || [] : [];
+    if (qrImages.length <= 1) return;
     const timer = window.setInterval(() => {
-      setSlideIndex((current) => (current + 1) % examChunkValues.length);
+      setSlideIndex((current) => (current + 1) % qrImages.length);
     }, slideSpeed);
     return () => window.clearInterval(timer);
-  }, [examChunkValues.length, slideSpeed]);
+  }, [qrCache, selectedExam, slideSpeed]);
 
   useEffect(() => {
     setSlideIndex(0);
-  }, [examPayload.eid, examChunkValues.length]);
+  }, [selectedExam?.id]);
+
+  function startNewDraft() {
+    setDraft(makeInitialDraft());
+  }
 
   function updateQuestion(
     qid: string,
@@ -101,49 +164,116 @@ export function useTeacherState() {
     });
   }
 
+  async function publishDraft() {
+    const normalized = normalizeDraft(draft);
+    const payload = buildExamPayload(normalized);
+    const examJson = encodeJson(payload);
+    const chunks = chunkString(payload.eid, examJson);
+    const chunkValues = chunks.map((chunk) => stringifyChunk(chunk));
+    setPreparingExamId(payload.eid);
+    const qrImages = await renderQrBatch(chunkValues, 360);
+    const now = new Date().toISOString();
+    const published: PublishedExam = {
+      id: payload.eid,
+      payload,
+      chunks,
+      chunkValues,
+      createdAt: now,
+      updatedAt: now,
+      results: [],
+    };
+
+    setExams((current) => [
+      published,
+      ...current.filter((exam) => exam.id !== published.id),
+    ]);
+    setQrCache((current) => ({ ...current, [published.id]: qrImages }));
+    setSelectedExamId(published.id);
+    setPreparingExamId("");
+    return published;
+  }
+
+  const ensureQrImages = useCallback(
+    async (examId: string) => {
+      const exam = exams.find((item) => item.id === examId);
+      if (!exam) return [];
+      const cached = qrCache[examId];
+      if (cached?.length === exam.chunkValues.length) return cached;
+
+      setPreparingExamId(examId);
+      const qrImages = await renderQrBatch(exam.chunkValues, 360);
+      setQrCache((current) => ({ ...current, [examId]: qrImages }));
+      setPreparingExamId("");
+      return qrImages;
+    },
+    [exams, qrCache],
+  );
+
+  function duplicateExamToDraft(examId: string) {
+    const exam = exams.find((item) => item.id === examId);
+    if (!exam) return null;
+    const nextDraft = examToDraft(exam);
+    setDraft(nextDraft);
+    return nextDraft;
+  }
+
   const collectResult = useCallback(
-    (result: ResultPayload) => {
-      const duplicate = results.some(
-        (item) =>
-          item.result.rid === result.rid ||
-          item.result.stu.sid === result.stu.sid ||
-          item.result.stu.code === result.stu.code,
-      );
-      const status =
-        result.eid !== normalized.eid
-          ? "exam-mismatch"
-          : duplicate
-            ? "duplicate"
-            : "valid";
-      const score = scoreObjectiveResult(normalized.qs, normalized.ak, result);
-      setResults((current) => [{ result, score, status }, ...current]);
-      setCollectorMessage(
-        status === "valid"
-          ? `Hasil ${result.stu.name || result.stu.sid} tersimpan.`
-          : status === "duplicate"
-            ? "Hasil terdeteksi duplikat dan tetap ditandai di tabel."
-            : "ID ujian hasil tidak cocok dengan paket aktif.",
+    (examId: string, result: ResultPayload) => {
+      setExams((current) =>
+        current.map((exam) => {
+          if (exam.id !== examId) return exam;
+          const answerKey = revealAnswerKey(
+            exam.payload.ak,
+            makeAnswerKeySecret(exam.payload.eid, exam.payload.sch),
+          );
+          const duplicate = exam.results.some(
+            (item) =>
+              item.result.rid === result.rid ||
+              item.result.stu.sid === result.stu.sid ||
+              item.result.stu.code === result.stu.code,
+          );
+          const status =
+            result.eid !== exam.id
+              ? "exam-mismatch"
+              : duplicate
+                ? "duplicate"
+                : "valid";
+          const score = scoreObjectiveResult(exam.payload.qs, answerKey, result);
+          setCollectorMessage(
+            status === "valid"
+              ? `Hasil ${result.stu.name || result.stu.sid} tersimpan.`
+              : status === "duplicate"
+                ? "Hasil terdeteksi duplikat dan tetap ditandai di tabel."
+                : "ID ujian hasil tidak cocok dengan paket aktif.",
+          );
+          return {
+            ...exam,
+            updatedAt: new Date().toISOString(),
+            results: [{ result, score, status }, ...exam.results],
+          };
+        }),
       );
     },
-    [normalized.ak, normalized.eid, normalized.qs, results],
+    [],
   );
 
   const processResultQr = useCallback(
-    (value: string) => {
+    (examId: string, value: string) => {
       try {
         const parsed = decodeJson<unknown>(value.trim());
         if (isResultPayload(parsed)) {
-          collectResult(parsed);
+          collectResult(examId, parsed);
           return;
         }
 
         if (isQrChunk(parsed)) {
-          const existing = resultChunks[parsed.i] || [];
+          const bufferKey = `${examId}:${parsed.i}`;
+          const existing = resultChunks[bufferKey] || [];
           const withoutDuplicate = existing.filter((chunk) => chunk.n !== parsed.n);
           const nextChunks = [...withoutDuplicate, parsed].sort((a, b) => a.n - b.n);
           setResultChunks((current) => ({
             ...current,
-            [parsed.i]: nextChunks,
+            [bufferKey]: nextChunks,
           }));
 
           if (nextChunks.length === parsed.t) {
@@ -152,7 +282,7 @@ export function useTeacherState() {
             if (!isResultPayload(result)) {
               throw new Error("Chunk lengkap, tetapi payload bukan hasil.");
             }
-            collectResult(result);
+            collectResult(examId, result);
           } else {
             setCollectorMessage(
               `Chunk hasil ${parsed.i}: ${nextChunks.length}/${parsed.t}`,
@@ -173,25 +303,27 @@ export function useTeacherState() {
 
   return {
     addQuestion,
-    answerMap,
     collectorMessage,
     draft,
-    examChunkValues,
-    examChunks,
-    examJson,
-    examPayload,
+    duplicateExamToDraft,
+    ensureQrImages,
+    exams,
     manualResult,
-    normalized,
+    preparingExamId,
     processResultQr,
+    publishDraft,
+    qrCache,
     removeQuestion,
-    results,
+    selectedExam,
+    selectedExamId,
     setAnswer,
     setDraft,
     setManualResult,
+    setSelectedExamId,
     setSlideSpeed,
     slideIndex,
     slideSpeed,
+    startNewDraft,
     updateQuestion,
-    validResults,
   };
 }

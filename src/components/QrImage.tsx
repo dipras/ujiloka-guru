@@ -1,32 +1,27 @@
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
+import { renderQrDataUrl } from "../lib/qr";
 
 type QrImageProps = {
   value: string;
   label: string;
+  src?: string;
   size?: number;
 };
 
-export function QrImage({ value, label, size = 220 }: QrImageProps) {
-  const [src, setSrc] = useState("");
+export function QrImage({ value, label, src: providedSrc, size = 220 }: QrImageProps) {
+  const [generatedSrc, setGeneratedSrc] = useState("");
+  const src = providedSrc || generatedSrc;
 
   useEffect(() => {
+    if (providedSrc) return;
     let active = true;
-    QRCode.toDataURL(value, {
-      errorCorrectionLevel: "M",
-      margin: 2,
-      width: size,
-      color: {
-        dark: "#162033",
-        light: "#ffffff",
-      },
-    }).then((url) => {
-      if (active) setSrc(url);
+    renderQrDataUrl(value, size).then((url) => {
+      if (active) setGeneratedSrc(url);
     });
     return () => {
       active = false;
     };
-  }, [size, value]);
+  }, [providedSrc, size, value]);
 
   return (
     <figure className="flex flex-col items-center gap-3 rounded-lg border border-line bg-white p-4">

@@ -1,37 +1,45 @@
 import { Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { SectionTitle } from "../components/SectionTitle";
-import { SummaryItem } from "../components/SummaryItem";
 import { TextField } from "../components/TextField";
 import { useTeacher } from "../teacher/teacherContext";
 
 export function CreateExamPage() {
   const {
     addQuestion,
-    answerMap,
     draft,
-    examJson,
-    examPayload,
-    normalized,
+    publishDraft,
     removeQuestion,
     setAnswer,
     setDraft,
     updateQuestion,
   } = useTeacher();
+  const navigate = useNavigate();
+  const [isPublishing, setIsPublishing] = useState(false);
+  const answerMap = useMemo(
+    () => new Map(draft.ak.map((entry) => [entry.qid, entry.oid])),
+    [draft.ak],
+  );
+
+  async function handleSubmit() {
+    setIsPublishing(true);
+    try {
+      const exam = await publishDraft();
+      navigate(`/exams/${exam.id}`);
+    } finally {
+      setIsPublishing(false);
+    }
+  }
 
   return (
-    <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-      <div className="flex flex-col gap-5">
+    <section className="flex flex-col gap-5">
         <section className="card">
           <SectionTitle
-            description="Kode sesi dipakai siswa untuk membuka ujian setelah scan QR."
+            description="ID ujian dan kode sesi dibuat otomatis saat QR dibuat."
             title="Metadata Ujian"
           />
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <TextField
-              label="ID ujian"
-              value={draft.eid}
-              onChange={(eid) => setDraft((current) => ({ ...current, eid }))}
-            />
             <TextField
               label="Judul"
               value={draft.ttl}
@@ -62,11 +70,6 @@ export function CreateExamPage() {
                 }
               />
             </label>
-            <TextField
-              label="Kode sesi"
-              value={draft.sch}
-              onChange={(sch) => setDraft((current) => ({ ...current, sch }))}
-            />
           </div>
         </section>
 
@@ -175,29 +178,16 @@ export function CreateExamPage() {
             ))}
           </div>
         </section>
-      </div>
-
-      <aside className="card h-fit">
-        <SectionTitle title="Ringkasan Draft" />
-        <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <SummaryItem label="Ujian" value={normalized.ttl || "-"} />
-          <SummaryItem label="Durasi" value={`${normalized.dur} menit`} />
-          <SummaryItem label="Mapel" value={normalized.subj || "-"} />
-          <SummaryItem label="Kelas" value={normalized.cls || "-"} />
-        </dl>
-        <div className="mt-4 rounded-md border border-line bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Payload
-          </p>
-          <p className="mt-1 text-sm font-semibold text-ink">
-            {examJson.length.toLocaleString("id-ID")} karakter
-          </p>
-          <p className="mt-2 break-all text-xs leading-5 text-muted">
-            ak: {examPayload.ak.slice(0, 48)}
-            {examPayload.ak.length > 48 ? "..." : ""}
-          </p>
+        <div className="flex justify-end">
+          <button
+            className="btn btn-primary"
+            disabled={isPublishing}
+            onClick={handleSubmit}
+            type="button"
+          >
+            {isPublishing ? "Menyiapkan QR..." : "Buat QR Ujian"}
+          </button>
         </div>
-      </aside>
     </section>
   );
 }

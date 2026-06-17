@@ -2,7 +2,8 @@ import { createBrowserRouter } from "react-router-dom";
 import { TeacherAppLayout } from "./layouts/TeacherAppLayout";
 import { CollectResultsPage } from "./pages/CollectResultsPage";
 import { CreateExamPage } from "./pages/CreateExamPage";
-import { DistributeQrPage } from "./pages/DistributeQrPage";
+import { ExamDetailPage } from "./pages/ExamDetailPage";
+import { ExamListPage } from "./pages/ExamListPage";
 import { RecapPage } from "./pages/RecapPage";
 
 export const router = createBrowserRouter([
@@ -12,18 +13,22 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
+        element: <ExamListPage />,
+      },
+      {
+        path: "exams/new",
         element: <CreateExamPage />,
       },
       {
-        path: "qr",
-        element: <DistributeQrPage />,
+        path: "exams/:id",
+        element: <ExamDetailPage />,
       },
       {
-        path: "collect",
+        path: "collect/:id",
         element: <CollectResultsPage />,
       },
       {
-        path: "recap",
+        path: "recap/:id",
         element: <RecapPage />,
       },
     ],

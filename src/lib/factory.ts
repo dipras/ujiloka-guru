@@ -17,6 +17,10 @@ export function makeId(prefix: string) {
     .slice(2, 7)}`;
 }
 
+export function makeSessionCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
 export function makeQuestion(index: number): Question {
   const qid = `q${index}`;
   return {
@@ -38,7 +42,7 @@ export function makeInitialDraft(): ExamDraft {
     subj: "",
     cls: "",
     dur: 45,
-    sch: "",
+    sch: makeSessionCode(),
     qs: [firstQuestion],
     ak: [{ qid: firstQuestion.id, oid: firstQuestion.opts[0].id }],
   };
@@ -65,7 +69,7 @@ export function normalizeDraft(draft: ExamDraft): ExamDraft {
     ttl: draft.ttl.trim(),
     subj: draft.subj.trim(),
     cls: draft.cls.trim(),
-    sch: draft.sch.trim(),
+    sch: draft.sch.trim() || makeSessionCode(),
     dur: Math.max(1, Math.round(draft.dur || 1)),
     qs: questions,
     ak: questions.map((question) => {
