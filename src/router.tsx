@@ -1,9 +1,33 @@
 import { createBrowserRouter } from "react-router-dom";
-import { TeacherMvpPage } from "./screens/TeacherMvpPage";
+import {
+  CollectResultsPage,
+  CreateExamPage,
+  DistributeQrPage,
+  RecapPage,
+  TeacherAppLayout,
+} from "./screens/TeacherApp";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <TeacherMvpPage />,
+    element: <TeacherAppLayout />,
+    children: [
+      {
+        index: true,
+        element: <CreateExamPage />,
+      },
+      {
+        path: "qr",
+        element: <DistributeQrPage />,
+      },
+      {
+        path: "collect",
+        element: <CollectResultsPage />,
+      },
+      {
+        path: "recap",
+        element: <RecapPage />,
+      },
+    ],
   },
 ]);
