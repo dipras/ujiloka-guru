@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, QrCode, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   makeInitialDraft,
@@ -6,14 +6,23 @@ import {
   normalizeDraft,
   type ExamDraft,
 } from "../lib/factory";
-import { encodeJson } from "../lib/codec";
+import { chunkString, encodeJson, stringifyChunk } from "../lib/codec";
 import { buildExamPayload } from "../lib/exam";
+import { QrImage } from "../components/QrImage";
 
 export function TeacherMvpPage() {
   const [draft, setDraft] = useState<ExamDraft>(() => makeInitialDraft());
   const normalized = useMemo(() => normalizeDraft(draft), [draft]);
   const examPayload = useMemo(() => buildExamPayload(draft), [draft]);
   const examJson = useMemo(() => encodeJson(examPayload), [examPayload]);
+  const examChunks = useMemo(
+    () => chunkString(examPayload.eid, examJson),
+    [examJson, examPayload.eid],
+  );
+  const examChunkValues = useMemo(
+    () => examChunks.map((chunk) => stringifyChunk(chunk)),
+    [examChunks],
+  );
   const answerMap = useMemo(
     () => new Map(draft.ak.map((entry) => [entry.qid, entry.oid])),
     [draft.ak],
@@ -315,6 +324,37 @@ export function TeacherMvpPage() {
             </p>
           </div>
         </aside>
+      </section>
+
+      <section className="card">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
+              <QrCode size={20} />
+              QR Ujian Multi-Chunk
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Siswa dapat memindai chunk dalam urutan bebas. Nilai `v` tiap
+              chunk dijaga maksimal 500 karakter.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="badge">
+              Payload {examJson.length.toLocaleString("id-ID")} karakter
+            </span>
+            <span className="badge">{examChunks.length} QR</span>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {examChunkValues.map((value, index) => (
+            <QrImage
+              key={`${examPayload.eid}-${index}`}
+              label={`${index + 1}/${examChunks.length} - ${examChunks[index].v.length} char`}
+              value={value}
+            />
+          ))}
+        </div>
       </section>
     </main>
   );
