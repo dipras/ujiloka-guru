@@ -1,5 +1,5 @@
-import { Plus, QrCode, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Printer, Plus, QrCode, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
   makeInitialDraft,
   makeQuestion,
@@ -12,6 +12,8 @@ import { QrImage } from "../components/QrImage";
 
 export function TeacherMvpPage() {
   const [draft, setDraft] = useState<ExamDraft>(() => makeInitialDraft());
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [slideSpeed, setSlideSpeed] = useState(1800);
   const normalized = useMemo(() => normalizeDraft(draft), [draft]);
   const examPayload = useMemo(() => buildExamPayload(draft), [draft]);
   const examJson = useMemo(() => encodeJson(examPayload), [examPayload]);
@@ -23,6 +25,18 @@ export function TeacherMvpPage() {
     () => examChunks.map((chunk) => stringifyChunk(chunk)),
     [examChunks],
   );
+
+  useEffect(() => {
+    if (examChunkValues.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setSlideIndex((current) => (current + 1) % examChunkValues.length);
+    }, slideSpeed);
+    return () => window.clearInterval(timer);
+  }, [examChunkValues.length, slideSpeed]);
+
+  useEffect(() => {
+    setSlideIndex(0);
+  }, [examPayload.eid, examChunkValues.length]);
   const answerMap = useMemo(
     () => new Map(draft.ak.map((entry) => [entry.qid, entry.oid])),
     [draft.ak],
@@ -338,21 +352,60 @@ export function TeacherMvpPage() {
               chunk dijaga maksimal 500 karakter.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 no-print">
             <span className="badge">
               Payload {examJson.length.toLocaleString("id-ID")} karakter
             </span>
             <span className="badge">{examChunks.length} QR</span>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={() => window.print()}
+            >
+              <Printer size={16} />
+              Cetak
+            </button>
+          </div>
+        </div>
+
+        <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] no-print">
+          <div className="grid place-items-center rounded-lg border border-line bg-slate-50 p-6">
+            <QrImage
+              key={`slide-${examPayload.eid}-${slideIndex}`}
+              label={`${slideIndex + 1}/${examChunks.length} - slideshow`}
+              size={300}
+              value={examChunkValues[slideIndex]}
+            />
+          </div>
+          <div className="rounded-lg border border-line p-4">
+            <h3 className="font-bold text-ink">Slideshow Looping</h3>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Tampilkan panel ini di proyektor agar siswa dapat memindai chunk
+              satu per satu.
+            </p>
+            <label className="mt-4 block">
+              <span className="label">Speed per QR: {slideSpeed} ms</span>
+              <input
+                className="w-full accent-primary"
+                type="range"
+                min={800}
+                max={5000}
+                step={100}
+                value={slideSpeed}
+                onChange={(event) => setSlideSpeed(Number(event.target.value))}
+              />
+            </label>
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {examChunkValues.map((value, index) => (
-            <QrImage
-              key={`${examPayload.eid}-${index}`}
-              label={`${index + 1}/${examChunks.length} - ${examChunks[index].v.length} char`}
-              value={value}
-            />
+            <div className="print-page" key={`${examPayload.eid}-${index}`}>
+              <QrImage
+                label={`${index + 1}/${examChunks.length} - ${examChunks[index].v.length} char`}
+                value={value}
+              />
+            </div>
           ))}
         </div>
       </section>
