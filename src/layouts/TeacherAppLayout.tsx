@@ -1,7 +1,5 @@
 import { ClipboardList, FileQuestion, Home, ScanLine } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Metric } from "../components/Metric";
-import { TeacherContext } from "../teacher/teacherContext";
 import { useTeacherState } from "../teacher/useTeacherState";
 
 export function TeacherAppLayout() {
@@ -24,7 +22,7 @@ export function TeacherAppLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="flex min-h-screen flex-col bg-canvas">
       <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur no-print">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -59,14 +57,17 @@ export function TeacherAppLayout() {
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-6">
-        <StatusStrip state={state} />
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-5 py-6">
         <Outlet context={state} />
       </main>
 
       <footer className="border-t border-line bg-white no-print">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-5 text-sm text-muted md:flex-row md:items-center md:justify-between">
-          <span>Alur MVP: Generate QR, Scan Hasil, Scoring, CSV.</span>
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-5 text-sm text-muted md:flex-row md:items-center md:justify-between">
+          <p className="max-w-3xl leading-6">
+            LIDM Teacher Web membantu guru membuat paket ujian offline,
+            membagikan soal lewat QR multi-chunk, mengumpulkan QR hasil, lalu
+            menghitung nilai dan mengekspor rekap CSV langsung di browser.
+          </p>
           <span>
             Exam ID:{" "}
             <strong className="text-ink">
@@ -76,24 +77,5 @@ export function TeacherAppLayout() {
         </div>
       </footer>
     </div>
-  );
-}
-
-function StatusStrip({ state }: { state: TeacherContext }) {
-  const { exams, selectedExam } = state;
-  const validResults =
-    selectedExam?.results.filter((item) => item.status === "valid").length || 0;
-
-  return (
-    <section className="grid gap-3 no-print sm:grid-cols-2 lg:grid-cols-4">
-      <Metric label="Total Ujian" value={`${exams.length} ujian`} />
-      <Metric label="Aktif" value={selectedExam?.payload.ttl || "Belum ada"} />
-      <Metric label="QR" value={`${selectedExam?.chunks.length || 0} chunk`} />
-      <Metric
-        detail={selectedExam ? selectedExam.payload.eid : "Pilih ujian"}
-        label="Hasil"
-        value={`${validResults}/${selectedExam?.results.length || 0} valid`}
-      />
-    </section>
   );
 }
