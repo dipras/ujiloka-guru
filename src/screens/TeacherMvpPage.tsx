@@ -1,19 +1,34 @@
-import { Printer, Plus, QrCode, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Download, Printer, Plus, QrCode, ScanLine, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   makeInitialDraft,
   makeQuestion,
   normalizeDraft,
   type ExamDraft,
 } from "../lib/factory";
-import { chunkString, encodeJson, stringifyChunk } from "../lib/codec";
+import {
+  chunkString,
+  decodeJson,
+  encodeJson,
+  isQrChunk,
+  isResultPayload,
+  reconstructChunks,
+  stringifyChunk,
+} from "../lib/codec";
 import { buildExamPayload } from "../lib/exam";
 import { QrImage } from "../components/QrImage";
+import { ResultScanner } from "../components/ResultScanner";
+import { scoreObjectiveResult } from "../lib/scoring";
+import { CollectedResult, QrChunk, ResultPayload } from "../lib/schema";
 
 export function TeacherMvpPage() {
   const [draft, setDraft] = useState<ExamDraft>(() => makeInitialDraft());
   const [slideIndex, setSlideIndex] = useState(0);
   const [slideSpeed, setSlideSpeed] = useState(1800);
+  const [manualResult, setManualResult] = useState("");
+  const [collectorMessage, setCollectorMessage] = useState("");
+  const [resultChunks, setResultChunks] = useState<Record<string, QrChunk[]>>({});
+  const [results, setResults] = useState<CollectedResult[]>([]);
   const normalized = useMemo(() => normalizeDraft(draft), [draft]);
   const examPayload = useMemo(() => buildExamPayload(draft), [draft]);
   const examJson = useMemo(() => encodeJson(examPayload), [examPayload]);
@@ -86,6 +101,76 @@ export function TeacherMvpPage() {
       };
     });
   }
+
+  const collectResult = useCallback(
+    (result: ResultPayload) => {
+      const duplicate = results.some(
+        (item) =>
+          item.result.rid === result.rid ||
+          item.result.stu.sid === result.stu.sid ||
+          item.result.stu.code === result.stu.code,
+      );
+      const status =
+        result.eid !== normalized.eid
+          ? "exam-mismatch"
+          : duplicate
+            ? "duplicate"
+            : "valid";
+      const score = scoreObjectiveResult(normalized.qs, normalized.ak, result);
+      setResults((current) => [{ result, score, status }, ...current]);
+      setCollectorMessage(
+        status === "valid"
+          ? `Hasil ${result.stu.name || result.stu.sid} tersimpan.`
+          : status === "duplicate"
+            ? "Hasil terdeteksi duplikat dan tetap ditandai di tabel."
+            : "ID ujian hasil tidak cocok dengan paket aktif.",
+      );
+    },
+    [normalized.ak, normalized.eid, normalized.qs, results],
+  );
+
+  const processResultQr = useCallback(
+    (value: string) => {
+      try {
+        const parsed = decodeJson<unknown>(value.trim());
+        if (isResultPayload(parsed)) {
+          collectResult(parsed);
+          return;
+        }
+
+        if (isQrChunk(parsed)) {
+          const existing = resultChunks[parsed.i] || [];
+          const withoutDuplicate = existing.filter((chunk) => chunk.n !== parsed.n);
+          const nextChunks = [...withoutDuplicate, parsed].sort((a, b) => a.n - b.n);
+          setResultChunks((current) => ({
+            ...current,
+            [parsed.i]: nextChunks,
+          }));
+
+          if (nextChunks.length === parsed.t) {
+            const reconstructed = reconstructChunks(nextChunks);
+            const result = decodeJson<unknown>(reconstructed);
+            if (!isResultPayload(result)) {
+              throw new Error("Chunk lengkap, tetapi payload bukan hasil.");
+            }
+            collectResult(result);
+          } else {
+            setCollectorMessage(
+              `Chunk hasil ${parsed.i}: ${nextChunks.length}/${parsed.t}`,
+            );
+          }
+          return;
+        }
+
+        throw new Error("QR bukan payload hasil atau chunk MVP.");
+      } catch (error) {
+        setCollectorMessage(
+          error instanceof Error ? error.message : "Payload hasil tidak valid.",
+        );
+      }
+    },
+    [collectResult, resultChunks],
+  );
 
   return (
     <main className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-5 py-8">
@@ -407,6 +492,93 @@ export function TeacherMvpPage() {
               />
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="card no-print">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
+              <ScanLine size={20} />
+              Collector Hasil
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Skor objektif dihitung di web dari kunci paket aktif. Skor dari
+              perangkat siswa tidak dipakai.
+            </p>
+          </div>
+          <span className="badge">{results.length} hasil</span>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <div className="flex flex-col gap-4">
+            <ResultScanner onScan={processResultQr} />
+            <div className="rounded-lg border border-line p-4">
+              <label>
+                <span className="label">Paste payload QR hasil</span>
+                <textarea
+                  className="field"
+                  value={manualResult}
+                  onChange={(event) => setManualResult(event.target.value)}
+                  placeholder='{"t":"result",...} atau {"i":"result-id",...}'
+                />
+              </label>
+              <button
+                className="btn btn-primary mt-3 w-full"
+                type="button"
+                onClick={() => {
+                  processResultQr(manualResult);
+                  setManualResult("");
+                }}
+              >
+                Proses Payload
+              </button>
+              {collectorMessage ? (
+                <div className="toast mt-3">{collectorMessage}</div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Nama</th>
+                  <th>ID/NIS</th>
+                  <th>Skor</th>
+                  <th>Benar</th>
+                  <th>Submit</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {results.length === 0 ? (
+                  <tr>
+                    <td className="text-muted" colSpan={6}>
+                      Belum ada hasil siswa.
+                    </td>
+                  </tr>
+                ) : (
+                  results.map((item) => (
+                    <tr key={`${item.result.rid}-${item.result.sub}`}>
+                      <td>{item.result.stu.name || "-"}</td>
+                      <td>{item.result.stu.sid || "-"}</td>
+                      <td>
+                        {item.score.score}/{item.score.maxScore}
+                      </td>
+                      <td>
+                        {item.score.correct}/{item.score.totalQuestions}
+                      </td>
+                      <td>{new Date(item.result.sub).toLocaleString("id-ID")}</td>
+                      <td>
+                        <span className="badge">{item.status}</span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </main>
