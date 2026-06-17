@@ -21,6 +21,7 @@ export function scoreObjectiveResult(
   return {
     score,
     maxScore,
+    percentage: maxScore > 0 ? Math.round((score / maxScore) * 10000) / 100 : 0,
     correct,
     totalQuestions: questions.length,
   };

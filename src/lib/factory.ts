@@ -26,7 +26,7 @@ export function makeQuestion(index: number): Question {
   return {
     id: qid,
     txt: "",
-    pts: 1,
+    pts: 10,
     opts: ["o1", "o2", "o3", "o4"].map((id) => ({
       id,
       txt: "",

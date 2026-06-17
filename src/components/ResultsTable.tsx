@@ -12,7 +12,8 @@ export function ResultsTable({ results }: ResultsTableProps) {
           <tr>
             <th>Nama</th>
             <th>ID/NIS</th>
-            <th>Skor</th>
+            <th>Nilai</th>
+            <th>Poin</th>
             <th>Benar</th>
             <th>Submit</th>
             <th>Status</th>
@@ -21,7 +22,7 @@ export function ResultsTable({ results }: ResultsTableProps) {
         <tbody className="divide-y divide-line">
           {results.length === 0 ? (
             <tr>
-              <td className="text-muted" colSpan={6}>
+              <td className="text-muted" colSpan={7}>
                 Belum ada hasil siswa.
               </td>
             </tr>
@@ -30,6 +31,7 @@ export function ResultsTable({ results }: ResultsTableProps) {
               <tr key={`${item.result.rid}-${item.result.sub}`}>
                 <td>{item.result.stu.name || "-"}</td>
                 <td>{item.result.stu.sid || "-"}</td>
+                <td>{formatPercentage(item.score)}</td>
                 <td>
                   {item.score.score}/{item.score.maxScore}
                 </td>
@@ -47,4 +49,16 @@ export function ResultsTable({ results }: ResultsTableProps) {
       </table>
     </div>
   );
+}
+
+function formatPercentage(score: CollectedResult["score"]) {
+  const percentage =
+    typeof score.percentage === "number"
+      ? score.percentage
+      : score.maxScore > 0
+        ? (score.score / score.maxScore) * 100
+        : 0;
+  return `${percentage.toLocaleString("id-ID", {
+    maximumFractionDigits: 2,
+  })}%`;
 }

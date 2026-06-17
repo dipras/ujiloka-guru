@@ -63,6 +63,7 @@ export type QrChunk = {
 export type ObjectiveScore = {
   score: number;
   maxScore: number;
+  percentage: number;
   correct: number;
   totalQuestions: number;
 };

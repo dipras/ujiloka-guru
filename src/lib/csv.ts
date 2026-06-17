@@ -7,7 +7,9 @@ const CSV_HEADERS = [
   "Nama",
   "Kelas",
   "Kode peserta",
-  "Skor objektif",
+  "Nilai persen",
+  "Poin objektif",
+  "Poin maksimal",
   "Jumlah soal",
   "Waktu submit",
   "Status",
@@ -27,7 +29,9 @@ export function buildResultCsv(results: CollectedResult[]) {
     item.result.stu.name,
     item.result.stu.cls,
     item.result.stu.code,
+    getPercentage(item),
     item.score.score,
+    item.score.maxScore,
     item.score.totalQuestions,
     item.result.sub,
     item.status,
@@ -36,6 +40,12 @@ export function buildResultCsv(results: CollectedResult[]) {
   return [CSV_HEADERS, ...rows]
     .map((row) => row.map((value) => escapeCsv(value)).join(","))
     .join("\n");
+}
+
+function getPercentage(item: CollectedResult) {
+  if (typeof item.score.percentage === "number") return item.score.percentage;
+  if (item.score.maxScore === 0) return 0;
+  return Math.round((item.score.score / item.score.maxScore) * 10000) / 100;
 }
 
 export function downloadCsv(filename: string, csv: string) {
