@@ -27,10 +27,10 @@ export function TeacherAppLayout() {
           <div>
             <div className="flex items-center gap-2 text-sm font-bold text-primary">
               <Home size={16} />
-              LIDM Teacher Web
+              UjiLoka Guru
             </div>
             <h1 className="mt-1 text-2xl font-bold text-ink">
-              Paket Ujian Offline QR
+              Ujian Offline Berbasis QR
             </h1>
           </div>
           <nav className="flex gap-2 overflow-x-auto">
@@ -63,9 +63,9 @@ export function TeacherAppLayout() {
       <footer className="border-t border-line bg-white no-print">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-5 text-sm text-muted md:flex-row md:items-center md:justify-between">
           <p className="max-w-3xl leading-6">
-            LIDM Teacher Web membantu guru membuat paket ujian offline,
-            membagikan soal lewat QR multi-chunk, mengumpulkan QR hasil, lalu
-            menghitung nilai dan mengekspor rekap CSV langsung di browser.
+            UjiLoka Guru membantu membuat paket ujian offline, membagikan soal
+            lewat QR multi-chunk, mengumpulkan QR hasil, menghitung nilai, dan
+            mengekspor rekap CSV langsung di browser.
           </p>
           <span>
             Exam ID:{" "}

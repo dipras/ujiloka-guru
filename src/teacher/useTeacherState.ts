@@ -30,7 +30,8 @@ import {
   ResultPayload,
 } from "../lib/schema";
 
-const STORAGE_KEY = "lidm-teacher-web.exams.v1";
+const STORAGE_KEY = "ujiloka-guru.exams.v1";
+const LEGACY_STORAGE_KEY = "lidm-teacher-web.exams.v1";
 
 export type PublishedExam = {
   id: string;
@@ -45,7 +46,9 @@ export type PublishedExam = {
 function loadStoredExams(): PublishedExam[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ||
+      window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as PublishedExam[]) : [];
