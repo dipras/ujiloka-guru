@@ -1,8 +1,25 @@
 import { Camera, CameraOff } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type ResultScannerProps = {
   onScan: (value: string) => void;
+};
+
+type Html5QrcodeInstance = {
+  clear: () => void;
+  getState: () => number;
+  start: (
+    cameraConfig: { facingMode: string },
+    config: { fps: number; qrbox: { width: number; height: number } },
+    onSuccess: (decodedText: string) => void,
+    onError: undefined,
+  ) => Promise<unknown>;
+  stop: () => Promise<void>;
+};
+
+const scannerState = {
+  scanning: 2,
+  paused: 3,
 };
 
 export function ResultScanner({ onScan }: ResultScannerProps) {
@@ -10,23 +27,28 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
   const [error, setError] = useState("");
   const readerId = "result-reader";
   const onScanRef = useRef(onScan);
-  const scannerRef = useRef<{
-    clear: () => void;
-    start: (
-      cameraConfig: { facingMode: string },
-      config: { fps: number; qrbox: { width: number; height: number } },
-      onSuccess: (decodedText: string) => void,
-      onError: undefined,
-    ) => Promise<unknown>;
-    stop: () => Promise<void>;
-  } | null>(null);
+  const scannerRef = useRef<Html5QrcodeInstance | null>(null);
+  const lastScanRef = useRef<{ value: string; scannedAt: number } | null>(null);
   const runningRef = useRef(false);
 
   useEffect(() => {
     onScanRef.current = onScan;
   }, [onScan]);
 
-  async function stopScanner(scanner: { stop: () => Promise<void>; clear: () => void }) {
+  const stopScanner = useCallback(async (scanner: Html5QrcodeInstance) => {
+    let canStop = runningRef.current;
+    try {
+      const state = scanner.getState();
+      canStop = state === scannerState.scanning || state === scannerState.paused;
+    } catch {
+      canStop = runningRef.current;
+    }
+
+    if (!canStop) {
+      runningRef.current = false;
+      return;
+    }
+
     try {
       await scanner.stop();
     } catch {
@@ -39,6 +61,20 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
         // Clear may throw when the reader element has already been cleaned up.
       }
     }
+  }, []);
+
+  function handleDecodedText(decodedText: string) {
+    const now = Date.now();
+    const lastScan = lastScanRef.current;
+    if (
+      lastScan?.value === decodedText &&
+      now - lastScan.scannedAt < 1_500
+    ) {
+      return;
+    }
+
+    lastScanRef.current = { value: decodedText, scannedAt: now };
+    onScanRef.current(decodedText);
   }
 
   useEffect(() => {
@@ -55,7 +91,7 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
         await scanner.start(
           { facingMode: "environment" },
           { fps: 8, qrbox: { width: 260, height: 260 } },
-          (decodedText) => onScanRef.current(decodedText),
+          (decodedText) => handleDecodedText(decodedText),
           undefined,
         );
         runningRef.current = true;
@@ -79,14 +115,9 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
         void stopScanner(scanner);
       } else {
         runningRef.current = false;
-        try {
-          scanner?.clear();
-        } catch {
-          // html5-qrcode can throw if clear happens before the camera starts.
-        }
       }
     };
-  }, [active]);
+  }, [active, stopScanner]);
 
   return (
     <div className="rounded-lg border border-line p-4">
