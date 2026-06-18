@@ -1,4 +1,4 @@
-import { ClipboardList, FileQuestion, Home, ScanLine } from "lucide-react";
+import { ClipboardList, FileQuestion, ScanLine } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useTeacherState } from "../teacher/useTeacherState";
 
@@ -26,8 +26,13 @@ export function TeacherAppLayout() {
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2 text-sm font-bold text-primary">
-              <Home size={16} />
-              UjiLoka Guru
+              <img
+                alt="UjiLoka Guru"
+                className="h-8 w-auto"
+                height={32}
+                src="/logo.png"
+                width={80}
+              />
             </div>
             <h1 className="mt-1 text-2xl font-bold text-ink">
               Ujian Offline Berbasis QR
