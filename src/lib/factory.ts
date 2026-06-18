@@ -59,6 +59,160 @@ export function makeInitialDraft(): ExamDraft {
   };
 }
 
+export function makeSampleDraft(): ExamDraft {
+  const samples = [
+    {
+      txt: "Hasil dari 12 + 8 adalah...",
+      opts: ["18", "20", "22", "24"],
+      answer: "b",
+    },
+    {
+      txt: "Ibu kota Indonesia saat ini adalah...",
+      opts: ["Bandung", "Surabaya", "Jakarta", "Medan"],
+      answer: "c",
+    },
+    {
+      txt: "Planet yang dikenal sebagai planet merah adalah...",
+      opts: ["Venus", "Mars", "Jupiter", "Saturnus"],
+      answer: "b",
+    },
+    {
+      txt: "Satuan utama arus listrik adalah...",
+      opts: ["Volt", "Ampere", "Ohm", "Watt"],
+      answer: "b",
+    },
+    {
+      txt: "Hasil dari 9 x 7 adalah...",
+      opts: ["54", "56", "63", "72"],
+      answer: "c",
+    },
+    {
+      txt: "Bentuk negara Indonesia adalah...",
+      opts: ["Kerajaan", "Republik", "Federasi", "Protektorat"],
+      answer: "b",
+    },
+    {
+      txt: "Proses tumbuhan membuat makanan disebut...",
+      opts: ["Respirasi", "Fotosintesis", "Evaporasi", "Fermentasi"],
+      answer: "b",
+    },
+    {
+      txt: "Perangkat untuk memasukkan teks ke komputer adalah...",
+      opts: ["Monitor", "Keyboard", "Speaker", "Printer"],
+      answer: "b",
+    },
+    {
+      txt: "Hasil dari 100 / 4 adalah...",
+      opts: ["20", "25", "30", "40"],
+      answer: "b",
+    },
+    {
+      txt: "Bahasa pemrograman yang umum dipakai untuk web interaktif adalah...",
+      opts: ["HTML", "CSS", "JavaScript", "SQL"],
+      answer: "c",
+    },
+    {
+      txt: "Lambang kimia air adalah...",
+      opts: ["CO2", "H2O", "O2", "NaCl"],
+      answer: "b",
+    },
+    {
+      txt: "Pulau terluas di Indonesia adalah...",
+      opts: ["Jawa", "Bali", "Kalimantan", "Madura"],
+      answer: "c",
+    },
+    {
+      txt: "Antonim dari kata 'besar' adalah...",
+      opts: ["Tinggi", "Kecil", "Panjang", "Lebar"],
+      answer: "b",
+    },
+    {
+      txt: "Komponen komputer yang berfungsi memproses instruksi adalah...",
+      opts: ["CPU", "Monitor", "Mouse", "Scanner"],
+      answer: "a",
+    },
+    {
+      txt: "Hasil dari 15% dari 200 adalah...",
+      opts: ["20", "25", "30", "35"],
+      answer: "c",
+    },
+    {
+      txt: "Organ tubuh manusia yang memompa darah adalah...",
+      opts: ["Paru-paru", "Jantung", "Ginjal", "Lambung"],
+      answer: "b",
+    },
+    {
+      txt: "Dokumen web biasanya ditulis dengan bahasa markup...",
+      opts: ["HTML", "Python", "C++", "Java"],
+      answer: "a",
+    },
+    {
+      txt: "Sudut siku-siku besarnya...",
+      opts: ["45 derajat", "60 derajat", "90 derajat", "180 derajat"],
+      answer: "c",
+    },
+    {
+      txt: "Alat untuk mengukur suhu adalah...",
+      opts: ["Barometer", "Termometer", "Higrometer", "Anemometer"],
+      answer: "b",
+    },
+    {
+      txt: "Hewan yang berkembang biak dengan bertelur disebut...",
+      opts: ["Vivipar", "Ovipar", "Ovovivipar", "Mamalia"],
+      answer: "b",
+    },
+    {
+      txt: "Pancasila memiliki jumlah sila sebanyak...",
+      opts: ["3", "4", "5", "6"],
+      answer: "c",
+    },
+    {
+      txt: "File CSV umumnya memisahkan data dengan tanda...",
+      opts: ["Koma", "Titik", "Garis miring", "Tanda tanya"],
+      answer: "a",
+    },
+    {
+      txt: "Hasil dari 2 pangkat 5 adalah...",
+      opts: ["16", "24", "32", "64"],
+      answer: "c",
+    },
+    {
+      txt: "Sumber energi utama bagi bumi adalah...",
+      opts: ["Bulan", "Matahari", "Angin", "Air"],
+      answer: "b",
+    },
+    {
+      txt: "Dalam ujian UjiLoka, skor final dihitung di...",
+      opts: ["Perangkat siswa", "UjiLoka Guru", "Kamera", "QR hasil siswa"],
+      answer: "b",
+    },
+  ];
+
+  const qs = samples.map((sample, index) => ({
+    id: `q${index + 1}`,
+    txt: sample.txt,
+    pts: 10,
+    opts: makeOptionIds(sample.opts.length).map((id, optionIndex) => ({
+      id,
+      txt: sample.opts[optionIndex],
+    })),
+  }));
+
+  return {
+    eid: makeId("exam"),
+    ttl: "Contoh Ujian 25 Soal",
+    subj: "Simulasi",
+    cls: "Demo",
+    dur: 45,
+    sch: makeSessionCode(),
+    qs,
+    ak: samples.map((sample, index) => ({
+      qid: `q${index + 1}`,
+      oid: sample.answer,
+    })),
+  };
+}
+
 export function normalizeDraft(draft: ExamDraft): ExamDraft {
   const questions = draft.qs.map((question, index) => {
     const id = question.id.trim() || `q${index + 1}`;

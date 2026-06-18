@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from "lucide-react";
+import { FileText, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SectionTitle } from "../components/SectionTitle";
@@ -6,6 +6,7 @@ import { TextField } from "../components/TextField";
 import {
   MAX_OPTIONS_PER_QUESTION,
   MIN_OPTIONS_PER_QUESTION,
+  makeSampleDraft,
 } from "../lib/factory";
 import { useTeacher } from "../teacher/teacherContext";
 
@@ -85,10 +86,20 @@ export function CreateExamPage() {
               description="Jawaban benar memakai label opsi a, b, c, dan seterusnya."
               title="Editor Soal"
             />
-            <button className="btn btn-primary" type="button" onClick={addQuestion}>
-              <Plus size={16} />
-              Soal
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => setDraft(makeSampleDraft())}
+              >
+                <FileText size={16} />
+                Contoh Soal
+              </button>
+              <button className="btn btn-primary" type="button" onClick={addQuestion}>
+                <Plus size={16} />
+                Soal
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 flex flex-col gap-4">
