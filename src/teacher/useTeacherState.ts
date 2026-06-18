@@ -304,7 +304,8 @@ export function useTeacherState() {
             (item) =>
               item.result.rid === result.rid ||
               item.result.stu.sid === result.stu.sid ||
-              item.result.stu.code === result.stu.code,
+              (Boolean(result.stu.code) &&
+                item.result.stu.code === result.stu.code),
           );
           const status =
             result.eid !== exam.id

@@ -79,8 +79,9 @@ export function ExamDetailPage() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-4">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Metric label="Soal" value={`${exam.payload.qs.length} soal`} />
+          <Metric label="Kode sesi" value={exam.payload.sch || "-"} />
           <Metric label="QR" value={`${exam.chunks.length} chunk`} />
           <Metric label="Hasil" value={`${validResults}/${exam.results.length} valid`} />
           <Metric
