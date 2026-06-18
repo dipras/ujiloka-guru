@@ -9,9 +9,37 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
   const [active, setActive] = useState(false);
   const [error, setError] = useState("");
   const readerId = "result-reader";
-  const scannerRef = useRef<{ stop: () => Promise<void>; clear: () => void } | null>(
-    null,
-  );
+  const onScanRef = useRef(onScan);
+  const scannerRef = useRef<{
+    clear: () => void;
+    start: (
+      cameraConfig: { facingMode: string },
+      config: { fps: number; qrbox: { width: number; height: number } },
+      onSuccess: (decodedText: string) => void,
+      onError: undefined,
+    ) => Promise<unknown>;
+    stop: () => Promise<void>;
+  } | null>(null);
+  const runningRef = useRef(false);
+
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
+
+  async function stopScanner(scanner: { stop: () => Promise<void>; clear: () => void }) {
+    try {
+      await scanner.stop();
+    } catch {
+      // Stop is not valid while html5-qrcode is still starting or already stopped.
+    } finally {
+      runningRef.current = false;
+      try {
+        scanner.clear();
+      } catch {
+        // Clear may throw when the reader element has already been cleaned up.
+      }
+    }
+  }
 
   useEffect(() => {
     if (!active) return;
@@ -19,6 +47,7 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
 
     async function startScanner() {
       try {
+        setError("");
         const { Html5Qrcode } = await import("html5-qrcode");
         if (cancelled) return;
         const scanner = new Html5Qrcode(readerId);
@@ -26,10 +55,15 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
         await scanner.start(
           { facingMode: "environment" },
           { fps: 8, qrbox: { width: 260, height: 260 } },
-          (decodedText) => onScan(decodedText),
+          (decodedText) => onScanRef.current(decodedText),
           undefined,
         );
+        runningRef.current = true;
+        if (cancelled) {
+          await stopScanner(scanner);
+        }
       } catch (scanError) {
+        if (cancelled) return;
         setError(scanError instanceof Error ? scanError.message : "Kamera gagal.");
         setActive(false);
       }
@@ -39,15 +73,20 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
 
     return () => {
       cancelled = true;
-      if (scannerRef.current) {
-        scannerRef.current
-          .stop()
-          .catch(() => undefined)
-          .finally(() => scannerRef.current?.clear());
-      }
+      const scanner = scannerRef.current;
       scannerRef.current = null;
+      if (scanner && runningRef.current) {
+        void stopScanner(scanner);
+      } else {
+        runningRef.current = false;
+        try {
+          scanner?.clear();
+        } catch {
+          // html5-qrcode can throw if clear happens before the camera starts.
+        }
+      }
     };
-  }, [active, onScan]);
+  }, [active]);
 
   return (
     <div className="rounded-lg border border-line p-4">
