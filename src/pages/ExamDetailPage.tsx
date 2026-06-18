@@ -174,7 +174,7 @@ export function ExamDetailPage() {
                   <input
                     className="w-full accent-primary"
                     max={5000}
-                    min={800}
+                    min={300}
                     onChange={(event) => setSlideSpeed(Number(event.target.value))}
                     step={100}
                     type="range"
