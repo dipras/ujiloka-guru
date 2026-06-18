@@ -59,7 +59,7 @@ export function RecapPage() {
           value={`${exam.results.length - validResults.length} hasil`}
         />
       </div>
-      <ResultsTable results={exam.results} />
+      <ResultsTable examId={exam.id} results={exam.results} />
     </section>
   );
 }

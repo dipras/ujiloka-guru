@@ -6,6 +6,7 @@ import { CreateExamPage } from "./pages/CreateExamPage";
 import { ExamDetailPage } from "./pages/ExamDetailPage";
 import { ExamListPage } from "./pages/ExamListPage";
 import { RecapPage } from "./pages/RecapPage";
+import { ResultDetailPage } from "./pages/ResultDetailPage";
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ export const router = createBrowserRouter([
       {
         path: "exams/:id",
         element: <ExamDetailPage />,
+      },
+      {
+        path: "exams/:id/results/:rid",
+        element: <ResultDetailPage />,
       },
       {
         path: "collect",

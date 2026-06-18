@@ -67,7 +67,7 @@ export function CollectResultsPage() {
             </button>
           </div>
         </div>
-        <ResultsTable results={exam.results} />
+        <ResultsTable examId={exam.id} results={exam.results} />
       </div>
     </section>
   );

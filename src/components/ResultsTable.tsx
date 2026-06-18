@@ -1,10 +1,12 @@
+import { Link } from "react-router-dom";
 import { CollectedResult } from "../lib/schema";
 
 type ResultsTableProps = {
+  examId?: string;
   results: CollectedResult[];
 };
 
-export function ResultsTable({ results }: ResultsTableProps) {
+export function ResultsTable({ examId, results }: ResultsTableProps) {
   return (
     <div className="table-wrap">
       <table className="table">
@@ -17,12 +19,13 @@ export function ResultsTable({ results }: ResultsTableProps) {
             <th>Benar</th>
             <th>Submit</th>
             <th>Status</th>
+            {examId ? <th>Aksi</th> : null}
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
           {results.length === 0 ? (
             <tr>
-              <td className="text-muted" colSpan={7}>
+              <td className="text-muted" colSpan={examId ? 8 : 7}>
                 Belum ada hasil siswa.
               </td>
             </tr>
@@ -42,6 +45,16 @@ export function ResultsTable({ results }: ResultsTableProps) {
                 <td>
                   <span className="badge">{item.status}</span>
                 </td>
+                {examId ? (
+                  <td>
+                    <Link
+                      className="btn btn-secondary min-h-9 px-3 py-1.5"
+                      to={`/exams/${examId}/results/${encodeURIComponent(item.result.rid)}`}
+                    >
+                      Detail
+                    </Link>
+                  </td>
+                ) : null}
               </tr>
             ))
           )}
