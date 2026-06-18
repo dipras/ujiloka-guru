@@ -10,9 +10,14 @@ type Html5QrcodeInstance = {
   getState: () => number;
   start: (
     cameraConfig: { facingMode: string },
-    config: { fps: number; qrbox: { width: number; height: number } },
+    config: {
+      fps: number;
+      qrbox: { width: number; height: number };
+      aspectRatio: number;
+      experimentalFeatures: { useBarCodeDetectorIfSupported: boolean };
+    },
     onSuccess: (decodedText: string) => void,
-    onError: undefined,
+    onError: () => void,
   ) => Promise<unknown>;
   stop: () => Promise<void>;
 };
@@ -25,6 +30,7 @@ const scannerState = {
 export function ResultScanner({ onScan }: ResultScannerProps) {
   const [active, setActive] = useState(false);
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
   const readerId = "result-reader";
   const onScanRef = useRef(onScan);
   const scannerRef = useRef<Html5QrcodeInstance | null>(null);
@@ -74,6 +80,7 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
     }
 
     lastScanRef.current = { value: decodedText, scannedAt: now };
+    setStatus("QR terbaca, memproses payload...");
     onScanRef.current(decodedText);
   }
 
@@ -84,23 +91,31 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
     async function startScanner() {
       try {
         setError("");
+        setStatus("Menyalakan kamera...");
         const { Html5Qrcode } = await import("html5-qrcode");
         if (cancelled) return;
-        const scanner = new Html5Qrcode(readerId);
+        const scanner = new Html5Qrcode(readerId) as Html5QrcodeInstance;
         scannerRef.current = scanner;
         await scanner.start(
           { facingMode: "environment" },
-          { fps: 8, qrbox: { width: 260, height: 260 } },
+          {
+            aspectRatio: 1.333,
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+            fps: 12,
+            qrbox: { width: 300, height: 300 },
+          },
           (decodedText) => handleDecodedText(decodedText),
-          undefined,
+          () => undefined,
         );
         runningRef.current = true;
+        setStatus("Scanner aktif. Dekatkan QR hasil ke tengah kamera.");
         if (cancelled) {
           await stopScanner(scanner);
         }
       } catch (scanError) {
         if (cancelled) return;
         setError(scanError instanceof Error ? scanError.message : "Kamera gagal.");
+        setStatus("");
         setActive(false);
       }
     }
@@ -116,6 +131,7 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
       } else {
         runningRef.current = false;
       }
+      setStatus("");
     };
   }, [active, stopScanner]);
 
@@ -138,6 +154,7 @@ export function ResultScanner({ onScan }: ResultScannerProps) {
         </button>
       </div>
       {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
+      {status ? <p className="mt-3 text-sm font-semibold text-primary">{status}</p> : null}
       <div
         className="mt-4 min-h-[280px] overflow-hidden rounded-md bg-slate-100"
         id={readerId}

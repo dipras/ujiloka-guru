@@ -44,6 +44,7 @@ export function CollectResultsPage() {
       <div className="grid gap-5 lg:grid-cols-[380px_minmax(0,1fr)]">
         <div className="flex flex-col gap-4">
           <ResultScanner onScan={(value) => processResultQr(exam.id, value)} />
+          {collectorMessage ? <div className="toast">{collectorMessage}</div> : null}
           <div className="card">
             <label>
               <span className="label">Paste payload QR hasil</span>
@@ -64,9 +65,6 @@ export function CollectResultsPage() {
             >
               Proses Payload
             </button>
-            {collectorMessage ? (
-              <div className="toast mt-3">{collectorMessage}</div>
-            ) : null}
           </div>
         </div>
         <ResultsTable results={exam.results} />
