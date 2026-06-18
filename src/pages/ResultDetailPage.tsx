@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, UserRound } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Metric } from "../components/Metric";
@@ -124,12 +124,6 @@ function AnswerBreakdown({
           const correctOptionId = keyByQuestion.get(question.id) || "";
           const studentOptionId = resultItem.result.ans[question.id] || "";
           const isCorrect = studentOptionId === correctOptionId;
-          const correctOption = question.opts.find(
-            (option) => option.id === correctOptionId,
-          );
-          const studentOption = question.opts.find(
-            (option) => option.id === studentOptionId,
-          );
 
           return (
             <article
@@ -157,20 +151,11 @@ function AnswerBreakdown({
                 </span>
               </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <AnswerCard
-                  label="Jawaban siswa"
-                  option={studentOption}
-                  optionId={studentOptionId}
-                  questions={question}
-                />
-                <AnswerCard
-                  label="Kunci benar"
-                  option={correctOption}
-                  optionId={correctOptionId}
-                  questions={question}
-                />
-              </div>
+              <OptionList
+                correctOptionId={correctOptionId}
+                question={question}
+                studentOptionId={studentOptionId}
+              />
             </article>
           );
         })}
@@ -179,27 +164,78 @@ function AnswerBreakdown({
   );
 }
 
-function AnswerCard({
-  label,
-  option,
-  optionId,
-  questions,
+function OptionList({
+  correctOptionId,
+  question,
+  studentOptionId,
 }: {
-  label: string;
-  option?: Question["opts"][number];
-  optionId: string;
-  questions: Question;
+  correctOptionId: string;
+  question: Question;
+  studentOptionId: string;
 }) {
-  const optionIndex = questions.opts.findIndex((item) => item.id === optionId);
-
   return (
-    <div className="rounded-md border border-line bg-slate-50 p-3">
-      <p className="text-xs font-bold uppercase text-muted">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-ink">
-        {option
-          ? `${formatOptionLabel(optionIndex)}. ${option.txt}`
-          : "Tidak dijawab"}
-      </p>
+    <div className="mt-4 flex flex-col gap-2">
+      {question.opts.map((option, optionIndex) => {
+        const isCorrectOption = option.id === correctOptionId;
+        const isStudentChoice = option.id === studentOptionId;
+        const isWrongChoice = isStudentChoice && !isCorrectOption;
+
+        return (
+          <div
+            className={[
+              "flex items-start gap-3 rounded-md border px-3 py-3 text-sm",
+              isCorrectOption
+                ? "border-green-200 bg-green-50 text-green-900"
+                : isWrongChoice
+                  ? "border-red-200 bg-red-50 text-red-900"
+                  : "border-line bg-slate-50 text-ink",
+            ].join(" ")}
+            key={option.id}
+          >
+            <span
+              className={[
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold uppercase",
+                isCorrectOption
+                  ? "border-green-300 bg-green-600 text-white"
+                  : isWrongChoice
+                    ? "border-red-300 bg-white text-red-700"
+                    : "border-line bg-white text-muted",
+              ].join(" ")}
+            >
+              {formatOptionLabel(optionIndex)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold leading-6">{option.txt}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {isCorrectOption ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-2.5 py-1 text-xs font-bold text-white">
+                    <Check size={13} />
+                    Jawaban benar
+                  </span>
+                ) : null}
+                {isStudentChoice ? (
+                  <span
+                    className={[
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold",
+                      isCorrectOption
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800",
+                    ].join(" ")}
+                  >
+                    <UserRound size={13} />
+                    Pilihan siswa
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {!studentOptionId ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+          Siswa tidak menjawab soal ini.
+        </p>
+      ) : null}
     </div>
   );
 }
