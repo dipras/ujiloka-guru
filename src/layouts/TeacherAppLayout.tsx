@@ -4,17 +4,16 @@ import { useTeacherState } from "../teacher/useTeacherState";
 
 export function TeacherAppLayout() {
   const state = useTeacherState();
-  const selectedPath = state.selectedExamId;
   const navigation = [
     { to: "/", label: "Ujian", icon: FileQuestion, end: true },
     {
-      to: selectedPath ? `/collect/${selectedPath}` : "/",
+      to: "/collect",
       label: "Kumpulkan",
       icon: ScanLine,
       end: false,
     },
     {
-      to: selectedPath ? `/recap/${selectedPath}` : "/",
+      to: "/recap",
       label: "Rekap",
       icon: ClipboardList,
       end: false,

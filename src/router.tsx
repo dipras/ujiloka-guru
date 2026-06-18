@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import { TeacherAppLayout } from "./layouts/TeacherAppLayout";
+import { ExamActionSelectPage } from "./pages/ExamActionSelectPage";
 import { CollectResultsPage } from "./pages/CollectResultsPage";
 import { CreateExamPage } from "./pages/CreateExamPage";
 import { ExamDetailPage } from "./pages/ExamDetailPage";
@@ -24,8 +25,16 @@ export const router = createBrowserRouter([
         element: <ExamDetailPage />,
       },
       {
+        path: "collect",
+        element: <ExamActionSelectPage mode="collect" />,
+      },
+      {
         path: "collect/:id",
         element: <CollectResultsPage />,
+      },
+      {
+        path: "recap",
+        element: <ExamActionSelectPage mode="recap" />,
       },
       {
         path: "recap/:id",
